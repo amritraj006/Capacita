@@ -27,7 +27,7 @@ export const ROLE_NAVIGATION = {
         title: 'Core Management',
         items: [
           { id: 'dashboard', label: 'Overview', icon: LayoutDashboard, badge: null },
-          { id: 'departments', label: 'Departments', icon: Building2, badge: '6' },
+          { id: 'departments', label: 'Departments', icon: Building2, badge: null },
           { id: 'employees', label: 'Employee Directory', icon: Users, badge: null },
         ],
       },
@@ -35,14 +35,17 @@ export const ROLE_NAVIGATION = {
         title: 'Learning & Capacity',
         items: [
           { id: 'courses', label: 'Course Catalog', icon: BookOpen, badge: null },
-          { id: 'training', label: 'Training Programs', icon: GraduationCap, badge: '3 Active' },
+          { id: 'training', label: 'Training Programs', icon: GraduationCap, badge: null },
           { id: 'enrollments', label: 'Enrollments', icon: UserCheck, badge: null },
           { id: 'competencies', label: 'Competency Framework', icon: Award, badge: null },
+          { id: 'assessments', label: 'Assessments & Tests', icon: CheckSquare, badge: null },
+          { id: 'certificates', label: 'Certificates', icon: Award, badge: null },
         ],
       },
       {
         title: 'Governance & Analytics',
         items: [
+          { id: 'progress', label: 'Progress Dashboard', icon: BarChart3, badge: null },
           { id: 'reports', label: 'System Reports', icon: BarChart3, badge: null },
           { id: 'settings', label: 'Platform Settings', icon: Settings, badge: null },
         ],
@@ -57,7 +60,7 @@ export const ROLE_NAVIGATION = {
         title: 'Instruction Hub',
         items: [
           { id: 'trainer-dashboard', label: 'Trainer Dashboard', icon: LayoutDashboard, badge: null },
-          { id: 'my-batches', label: 'Assigned Batches', icon: CalendarCheck, badge: '2 Upcoming' },
+          { id: 'my-batches', label: 'Assigned Batches', icon: CalendarCheck, badge: null },
           { id: 'materials', label: 'Learning Materials', icon: FileText, badge: null },
         ],
       },
@@ -65,7 +68,9 @@ export const ROLE_NAVIGATION = {
         title: 'Learner Evaluation',
         items: [
           { id: 'cohort-learners', label: 'Enrolled Trainees', icon: Users, badge: null },
-          { id: 'assessments-grading', label: 'Assessments & Grading', icon: CheckSquare, badge: '12 Pending' },
+          { id: 'progress-monitoring', label: 'Progress Monitoring', icon: TrendingUp, badge: null },
+          { id: 'assessments-grading', label: 'Assessments & Grading', icon: CheckSquare, badge: null },
+          { id: 'reports', label: 'Performance Reports', icon: BarChart3, badge: null },
           { id: 'attendance-activity', label: 'Session Attendance', icon: Clock, badge: null },
         ],
       },
@@ -79,16 +84,16 @@ export const ROLE_NAVIGATION = {
         title: 'My Learning Space',
         items: [
           { id: 'learner-dashboard', label: 'My Learning Portal', icon: Compass, badge: null },
-          { id: 'my-courses', label: 'Enrolled Courses', icon: BookOpen, badge: '4 In Progress' },
-          { id: 'training-calendar', label: 'Scheduled Sessions', icon: Calendar, badge: 'Tomorrow' },
+          { id: 'my-courses', label: 'Enrolled Courses', icon: BookOpen, badge: null },
+          { id: 'training-calendar', label: 'Scheduled Sessions', icon: Calendar, badge: null },
         ],
       },
       {
         title: 'Growth & Outcomes',
         items: [
           { id: 'my-assessments', label: 'My Assessments', icon: HelpCircle, badge: null },
-          { id: 'my-competencies', label: 'Skills & Competencies', icon: TrendingUp, badge: 'Level 3' },
-          { id: 'my-certificates', label: 'Earned Certificates', icon: Award, badge: '2 Verified' },
+          { id: 'my-competencies', label: 'Skills & Competencies', icon: TrendingUp, badge: null },
+          { id: 'my-certificates', label: 'Earned Certificates', icon: Award, badge: null },
         ],
       },
     ],

@@ -15,6 +15,7 @@ import { Breadcrumbs } from '../design-system/Breadcrumbs'
 import { Badge } from '../design-system/Badge'
 import { useAuth } from '../context/AuthContext'
 import { ChangePasswordModal } from '../pages/auth/ChangePasswordModal'
+import { NotificationDropdown } from '../components/NotificationDropdown'
 
 export function AppShell({
   activeRole,
@@ -242,10 +243,7 @@ export function AppShell({
                 />
               </div>
 
-              <button className="relative p-2 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors">
-                <Bell className="h-4 w-4" />
-                <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-indigo-600 ring-2 ring-white" />
-              </button>
+              <NotificationDropdown />
 
               {/* User Dropdown */}
               <div className="relative">
