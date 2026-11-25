@@ -138,12 +138,14 @@ class CertificateViewSet(viewsets.ModelViewSet):
         grade_score = None
         try:
             from assessments.models import AssessmentSubmission
-            submission = AssessmentSubmission.objects.filter(
-                enrollment=enrollment,
-                result='PASSED'
-            ).order_by('-score').first()
+            sub_qs = AssessmentSubmission.objects.filter(employee=employee, is_passed=True)
+            if course:
+                sub_qs = sub_qs.filter(assessment__course=course)
+            elif training_program:
+                sub_qs = sub_qs.filter(assessment__training_program=training_program)
+            submission = sub_qs.order_by('-percentage').first()
             if submission:
-                grade_score = submission.score
+                grade_score = submission.percentage if submission.percentage is not None else submission.score
         except Exception:
             pass
 

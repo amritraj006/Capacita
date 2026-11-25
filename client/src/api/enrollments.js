@@ -86,4 +86,14 @@ export const enrollmentsApi = {
     if (!res.ok) throw new Error('Failed to fetch trainer monitoring records')
     return res.json()
   },
+
+  async openProgramCourse(trainingProgramId, courseId) {
+    const res = await apiClient('/enrollments/open_program_course/', {
+      method: 'POST',
+      body: JSON.stringify({ training_program_id: trainingProgramId, course_id: courseId }),
+    })
+    const result = await res.json()
+    if (!res.ok) throw new Error(result.detail || 'Failed to open course')
+    return result
+  },
 }

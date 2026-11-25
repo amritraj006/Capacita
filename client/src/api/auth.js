@@ -16,6 +16,53 @@ export const authApi = {
     return data
   },
 
+  async applyTrainer(trainerData) {
+    const res = await apiClient('/accounts/trainer-apply/', {
+      method: 'POST',
+      body: JSON.stringify(trainerData),
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      const err = Object.values(data)[0]
+      throw new Error(Array.isArray(err) ? err[0] : err || 'Trainer application failed')
+    }
+    setStoredTokens(data.access, data.refresh)
+    localStorage.setItem('capacita_user', JSON.stringify(data.user))
+    return data
+  },
+
+  async getMyTrainerApplication() {
+    const res = await apiClient('/accounts/trainer-application/me/')
+    if (!res.ok) throw new Error('Failed to load trainer application details')
+    return res.json()
+  },
+
+  async reapplyTrainer(updateData) {
+    const res = await apiClient('/accounts/trainer-application/reapply/', {
+      method: 'POST',
+      body: JSON.stringify(updateData),
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      const err = Object.values(data)[0]
+      throw new Error(Array.isArray(err) ? err[0] : err || 'Failed to resubmit application')
+    }
+    return data
+  },
+
+  async deleteTrainerAccount() {
+    const res = await apiClient('/accounts/trainer-application/delete-account/', {
+      method: 'DELETE',
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      throw new Error(data.detail || 'Failed to delete account')
+    }
+    clearStoredTokens()
+    localStorage.removeItem('capacita_user')
+    return true
+  },
+
   async login(email, password) {
     const res = await apiClient('/accounts/login/', {
       method: 'POST',
@@ -35,6 +82,7 @@ export const authApi = {
       await apiClient('/accounts/logout/', { method: 'POST' })
     } finally {
       clearStoredTokens()
+      localStorage.removeItem('capacita_user')
     }
   },
 
@@ -67,7 +115,10 @@ export const authApi = {
       body: JSON.stringify({ email }),
     })
     const data = await res.json()
-    if (!res.ok) throw new Error(data.detail || 'Password reset request failed')
+    if (!res.ok) {
+      const err = Object.values(data)[0]
+      throw new Error(Array.isArray(err) ? err[0] : err || 'Reset request failed')
+    }
     return data
   },
 
@@ -82,26 +133,10 @@ export const authApi = {
       }),
     })
     const data = await res.json()
-    if (!res.ok) throw new Error(data.detail || 'Password reset confirmation failed')
+    if (!res.ok) {
+      const err = Object.values(data)[0]
+      throw new Error(Array.isArray(err) ? err[0] : err || 'Password reset failed')
+    }
     return data
-  },
-
-  // Test endpoints for RBAC verification
-  async testAdminOnly() {
-    const res = await apiClient('/accounts/test/admin-only/')
-    const data = await res.json()
-    return { status: res.status, ok: res.ok, data }
-  },
-
-  async testTrainerOnly() {
-    const res = await apiClient('/accounts/test/trainer-only/')
-    const data = await res.json()
-    return { status: res.status, ok: res.ok, data }
-  },
-
-  async testEmployeeOnly() {
-    const res = await apiClient('/accounts/test/employee-only/')
-    const data = await res.json()
-    return { status: res.status, ok: res.ok, data }
   },
 }

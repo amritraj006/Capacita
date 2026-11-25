@@ -51,14 +51,27 @@ export const coursesApi = {
     const res = await apiClient(`/courses/${id}/`, {
       method: 'DELETE',
     })
-    if (!res.ok) throw new Error('Failed to delete course')
+    if (!res.ok) {
+      const result = await res.json().catch(() => ({}))
+      throw new Error(result.detail || 'Failed to delete course')
+    }
     return true
   },
 
+  async togglePublish(id) {
+    const res = await apiClient(`/courses/${id}/toggle_publish/`, {
+      method: 'POST',
+    })
+    const result = await res.json()
+    if (!res.ok) throw new Error(result.detail || 'Failed to toggle course status')
+    return result
+  },
+
   async addModule(courseId, data) {
+    const isFormData = data instanceof FormData
     const res = await apiClient(`/courses/${courseId}/add_module/`, {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: isFormData ? data : JSON.stringify(data),
     })
     const result = await res.json()
     if (!res.ok) {

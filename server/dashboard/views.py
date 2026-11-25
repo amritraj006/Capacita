@@ -13,6 +13,7 @@ from enrollments.models import Enrollment
 from progress.models import ModuleProgress
 from assessments.models import Assessment, AssessmentSubmission
 from certificates.models import Certificate
+from accounts.permissions import is_trainer_approved
 
 
 class AdminDashboardView(APIView):
@@ -92,6 +93,8 @@ class AdminDashboardView(APIView):
             'total_departments': total_departments,
             'total_courses': total_courses,
             'total_training_programs': total_training_programs,
+            'total_active_enrollments': Enrollment.objects.exclude(status__in=[Enrollment.Status.COMPLETED, Enrollment.Status.DROPPED]).count(),
+            'completed_training_programs': TrainingProgram.objects.filter(status=TrainingProgram.Status.COMPLETED).count(),
             'training_participation': {
                 'total_enrollments': total_training_enrollments,
                 'active_trainees': active_trainees,
@@ -119,8 +122,11 @@ class TrainerDashboardView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        if request.user.role not in ['TRAINER', 'ADMIN']:
-            return Response({'detail': 'Trainer access required.'}, status=status.HTTP_403_FORBIDDEN)
+        if not is_trainer_approved(request.user):
+            return Response(
+                {'detail': 'Trainer access restricted. Your application is either pending approval, rejected, or inactive.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
         user = request.user
         # Programs led by trainer
@@ -204,6 +210,9 @@ class TrainerDashboardView(APIView):
 
         return Response({
             'assigned_programs_count': len(assigned_programs_data),
+            'upcoming_programs_count': programs_qs.filter(status=TrainingProgram.Status.SCHEDULED).count(),
+            'ongoing_programs_count': programs_qs.filter(status=TrainingProgram.Status.IN_PROGRESS).count(),
+            'completed_programs_count': programs_qs.filter(status=TrainingProgram.Status.COMPLETED).count(),
             'assigned_programs': assigned_programs_data,
             'assigned_employees_count': assigned_employees_count,
             'assigned_employees': assigned_employees_list,
@@ -230,7 +239,22 @@ class EmployeeDashboardView(APIView):
     def get(self, request):
         user = request.user
         if not hasattr(user, 'employee_profile'):
-            return Response({'detail': 'Employee profile required.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({
+                'has_profile': False,
+                'assigned_courses': [],
+                'active_training_programs': [],
+                'completed_training_programs': 0,
+                'learning_progress': {
+                    'total_courses': 0,
+                    'completed_courses': 0,
+                    'overall_progress': 0,
+                    'total_modules': 0,
+                    'completed_modules': 0,
+                },
+                'pending_assessments': [],
+                'completed_courses': [],
+                'earned_certificates': [],
+            })
 
         employee = user.employee_profile
 
@@ -327,8 +351,10 @@ class EmployeeDashboardView(APIView):
             })
 
         return Response({
+            'has_profile': True,
             'assigned_courses': assigned_courses,
             'active_training_programs': active_trainings,
+            'completed_training_programs': sum(1 for t in active_trainings if t['enrollment_status'] == Enrollment.Status.COMPLETED),
             'learning_progress': {
                 'total_courses': total_courses_count,
                 'completed_courses': completed_count,

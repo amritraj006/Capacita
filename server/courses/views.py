@@ -1,5 +1,6 @@
-from rest_framework import viewsets, filters, permissions
+from rest_framework import viewsets, filters, permissions, status
 from rest_framework.decorators import action
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from .models import Course, CourseModule
 from .serializers import CourseSerializer, CourseModuleSerializer
@@ -37,20 +38,45 @@ class CourseViewSet(viewsets.ModelViewSet):
 
         return queryset
 
+    def destroy(self, request, *args, **kwargs):
+        course = self.get_object()
+        if course.training_programs.exists() or course.enrollments.exists():
+            return Response(
+                {
+                    "detail": (
+                        f"Cannot delete course '{course.title}' because it is currently used in "
+                        "training programs or employee enrollments. You can unpublish it instead."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        return super().destroy(request, *args, **kwargs)
+
     @action(detail=True, methods=['post'], permission_classes=[CoursePermission])
+    def toggle_publish(self, request, pk=None):
+        course = self.get_object()
+        course.is_active = not course.is_active
+        course.save(update_fields=['is_active', 'updated_at'])
+        return Response(CourseSerializer(course, context={'request': request}).data)
+
+    @action(
+        detail=True,
+        methods=['post'],
+        permission_classes=[CoursePermission],
+        parser_classes=[MultiPartParser, FormParser, JSONParser]
+    )
     def add_module(self, request, pk=None):
         course = self.get_object()
-        # compute next order
         next_order = (course.modules.count() + 1)
         data = request.data.copy()
         data['course'] = course.id
-        if 'order' not in data:
+        if 'order' not in data or not data['order']:
             data['order'] = next_order
 
-        serializer = CourseModuleSerializer(data=data)
+        serializer = CourseModuleSerializer(data=data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
-            return Response(CourseSerializer(course).data)
+            return Response(CourseSerializer(course, context={'request': request}).data)
         return Response(serializer.errors, status=400)
 
 

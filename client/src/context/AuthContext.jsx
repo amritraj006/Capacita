@@ -55,12 +55,19 @@ export function AuthProvider({ children }) {
     return data
   }
 
+  const applyTrainer = async (trainerData) => {
+    const data = await authApi.applyTrainer(trainerData)
+    setUser(data.user)
+    return data
+  }
+
   const logout = async () => {
     try {
       await authApi.logout()
     } finally {
       setUser(null)
       clearStoredTokens()
+      localStorage.removeItem('capacita_user')
     }
   }
 
@@ -80,10 +87,12 @@ export function AuthProvider({ children }) {
       value={{
         user,
         role: user?.role || null,
+        trainerStatus: user?.trainer_status || null,
         isAuthenticated: !!user,
         loading,
         login,
         register,
+        applyTrainer,
         logout,
         refreshProfile,
       }}

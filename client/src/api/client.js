@@ -37,8 +37,9 @@ const onRefreshed = (newAccessToken) => {
 export async function apiClient(endpoint, options = {}) {
   const { access, refresh } = getStoredTokens()
 
+  const isFormData = options.body instanceof FormData
   const headers = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(options.headers || {}),
   }
 

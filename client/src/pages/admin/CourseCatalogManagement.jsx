@@ -6,13 +6,16 @@ import {
   Filter,
   RefreshCw,
   AlertCircle,
-  CheckCircle2,
+  Edit2,
   Trash2,
   X,
   FilePlus,
   Layers,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Clock,
+  Eye,
+  EyeOff,
 } from 'lucide-react'
 import { coursesApi } from '../../api/courses'
 
@@ -25,6 +28,7 @@ export function CourseCatalogManagement() {
 
   // Modals
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [editingCourse, setEditingCourse] = useState(null)
   const [showAddModuleModal, setShowAddModuleModal] = useState(false)
   const [selectedCourseForModule, setSelectedCourseForModule] = useState(null)
   const [expandedCourseId, setExpandedCourseId] = useState(null)
@@ -34,8 +38,9 @@ export function CourseCatalogManagement() {
     code: '',
     title: '',
     description: '',
-    category: 'Software Engineering',
+    category: 'General',
     level: 'BEGINNER',
+    duration_hours: '1.0',
   })
 
   const [moduleForm, setModuleForm] = useState({
@@ -43,6 +48,7 @@ export function CourseCatalogManagement() {
     content_type: 'TEXT',
     content_data: '',
     order: 1,
+    file: null,
   })
 
   const [submitting, setSubmitting] = useState(false)
@@ -66,19 +72,58 @@ export function CourseCatalogManagement() {
     loadCourses()
   }, [])
 
-  const handleCreateCourse = async (e) => {
+  const openCreateCourse = () => {
+    setEditingCourse(null)
+    setCourseForm({ code: '', title: '', description: '', category: 'General', level: 'BEGINNER', duration_hours: '1.0' })
+    setModalError(null)
+    setShowCreateModal(true)
+  }
+
+  const openEditCourse = (course) => {
+    setEditingCourse(course)
+    setCourseForm({
+      code: course.code,
+      title: course.title,
+      description: course.description || '',
+      category: course.category || 'General',
+      level: course.level || 'BEGINNER',
+      duration_hours: String(course.duration_hours || '1.0'),
+    })
+    setModalError(null)
+    setShowCreateModal(true)
+  }
+
+  const handleSaveCourse = async (e) => {
     e.preventDefault()
     setModalError(null)
     try {
       setSubmitting(true)
-      await coursesApi.createCourse(courseForm)
+      const payload = {
+        ...courseForm,
+        duration_hours: parseFloat(courseForm.duration_hours) || 1.0,
+      }
+      if (editingCourse) {
+        await coursesApi.updateCourse(editingCourse.id, payload)
+      } else {
+        await coursesApi.createCourse(payload)
+      }
       setShowCreateModal(false)
-      setCourseForm({ code: '', title: '', description: '', category: 'Software Engineering', level: 'BEGINNER' })
+      setEditingCourse(null)
+      setCourseForm({ code: '', title: '', description: '', category: 'General', level: 'BEGINNER', duration_hours: '1.0' })
       loadCourses()
     } catch (err) {
-      setModalError(err.message || 'Failed to create course.')
+      setModalError(err.message || 'Failed to save course.')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleTogglePublish = async (course) => {
+    try {
+      await coursesApi.togglePublish(course.id)
+      loadCourses()
+    } catch (err) {
+      alert(err.message || 'Failed to update course status.')
     }
   }
 
@@ -88,9 +133,26 @@ export function CourseCatalogManagement() {
     setModalError(null)
     try {
       setSubmitting(true)
-      await coursesApi.addModule(selectedCourseForModule.id, moduleForm)
+      let payload
+      if (moduleForm.file) {
+        const fd = new FormData()
+        fd.append('title', moduleForm.title)
+        fd.append('content_type', moduleForm.content_type)
+        fd.append('content_data', moduleForm.content_data || moduleForm.file.name)
+        fd.append('order', String(moduleForm.order))
+        fd.append('file', moduleForm.file)
+        payload = fd
+      } else {
+        payload = {
+          title: moduleForm.title,
+          content_type: moduleForm.content_type,
+          content_data: moduleForm.content_data,
+          order: moduleForm.order,
+        }
+      }
+      await coursesApi.addModule(selectedCourseForModule.id, payload)
       setShowAddModuleModal(false)
-      setModuleForm({ title: '', content_type: 'TEXT', content_data: '', order: 1 })
+      setModuleForm({ title: '', content_type: 'TEXT', content_data: '', order: 1, file: null })
       loadCourses()
     } catch (err) {
       setModalError(err.message || 'Failed to add module.')
@@ -102,7 +164,7 @@ export function CourseCatalogManagement() {
   const openAddModuleModal = (course) => {
     setSelectedCourseForModule(course)
     const nextOrder = (course.modules?.length || 0) + 1
-    setModuleForm({ title: '', content_type: 'TEXT', content_data: '', order: nextOrder })
+    setModuleForm({ title: '', content_type: 'TEXT', content_data: '', order: nextOrder, file: null })
     setModalError(null)
     setShowAddModuleModal(true)
   }
@@ -154,10 +216,7 @@ export function CourseCatalogManagement() {
               Refresh
             </button>
             <button
-              onClick={() => {
-                setModalError(null)
-                setShowCreateModal(true)
-              }}
+              onClick={openCreateCourse}
               className="inline-flex items-center gap-2 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-medium transition shadow-xs"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -244,7 +303,10 @@ export function CourseCatalogManagement() {
                           c.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'
                         }`}
                       >
-                        {c.is_active ? 'Active' : 'Archived'}
+                        {c.is_active ? 'Published' : 'Unpublished'}
+                      </span>
+                      <span className="text-xs text-slate-400 inline-flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> {c.duration_hours || 1}h
                       </span>
                     </div>
 
@@ -252,7 +314,24 @@ export function CourseCatalogManagement() {
                     <p className="text-xs text-slate-500 max-w-3xl line-clamp-2">{c.description}</p>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                    <button
+                      onClick={() => handleTogglePublish(c)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-medium transition"
+                      title={c.is_active ? 'Unpublish Course' : 'Publish Course'}
+                    >
+                      {c.is_active ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      <span>{c.is_active ? 'Unpublish' : 'Publish'}</span>
+                    </button>
+
+                    <button
+                      onClick={() => openEditCourse(c)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-medium transition"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                      <span>Edit</span>
+                    </button>
+
                     <button
                       onClick={() => openAddModuleModal(c)}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-medium transition"
@@ -333,7 +412,9 @@ export function CourseCatalogManagement() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
           <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
-              <h2 className="text-sm font-semibold text-slate-900">Create New Course</h2>
+              <h2 className="text-sm font-semibold text-slate-900">
+                {editingCourse ? `Edit Course: ${editingCourse.code}` : 'Create New Course'}
+              </h2>
               <button
                 onClick={() => setShowCreateModal(false)}
                 className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition"
@@ -342,7 +423,7 @@ export function CourseCatalogManagement() {
               </button>
             </div>
 
-            <form onSubmit={handleCreateCourse} className="p-6 space-y-4">
+            <form onSubmit={handleSaveCourse} className="p-6 space-y-4">
               {modalError && (
                 <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs">
                   {modalError}
@@ -392,15 +473,28 @@ export function CourseCatalogManagement() {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Category</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Software Engineering"
-                  value={courseForm.category}
-                  onChange={(e) => setCourseForm({ ...courseForm, category: e.target.value })}
-                  className="w-full text-xs border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Category</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Software Engineering"
+                    value={courseForm.category}
+                    onChange={(e) => setCourseForm({ ...courseForm, category: e.target.value })}
+                    className="w-full text-xs border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Duration (Hours)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0.5"
+                    value={courseForm.duration_hours}
+                    onChange={(e) => setCourseForm({ ...courseForm, duration_hours: e.target.value })}
+                    className="w-full text-xs border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
               </div>
 
               <div>
@@ -429,7 +523,7 @@ export function CourseCatalogManagement() {
                   disabled={submitting}
                   className="px-4 py-2 text-xs font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition shadow-xs disabled:opacity-50"
                 >
-                  {submitting ? 'Creating...' : 'Create Course'}
+                  {submitting ? 'Saving...' : editingCourse ? 'Save Changes' : 'Create Course'}
                 </button>
               </div>
             </form>
@@ -503,21 +597,36 @@ export function CourseCatalogManagement() {
                 </div>
               </div>
 
+              {moduleForm.content_type === 'DOCUMENT' && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Upload Document (PDF / DOCX / Guide)
+                  </label>
+                  <input
+                    type="file"
+                    onChange={(e) => setModuleForm({ ...moduleForm, file: e.target.files?.[0] || null })}
+                    className="w-full text-xs border border-slate-200 rounded-lg p-2 bg-slate-50"
+                  />
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Content Data / URL / Text Body <span className="text-rose-500">*</span>
+                  Content Data / URL / Notes {moduleForm.file ? '(optional)' : <span className="text-rose-500">*</span>}
                 </label>
                 <textarea
                   rows={4}
                   placeholder={
                     moduleForm.content_type === 'VIDEO'
                       ? 'https://example.com/stream.mp4'
-                      : 'Instructional text or documentation content...'
+                      : moduleForm.content_type === 'LINK'
+                      ? 'https://example.com/resource'
+                      : 'Instructional text or documentation notes...'
                   }
                   value={moduleForm.content_data}
                   onChange={(e) => setModuleForm({ ...moduleForm, content_data: e.target.value })}
                   className="w-full text-xs border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
-                  required
+                  required={!moduleForm.file}
                 />
               </div>
 

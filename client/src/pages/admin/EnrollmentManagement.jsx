@@ -152,15 +152,12 @@ export function EnrollmentManagement() {
 
   const filteredEnrollments = enrollments.filter((e) => {
     const emp = e.employee_details || {}
-    const empUser = emp.user_details || {}
     const nameMatch =
-      `${empUser.first_name || ''} ${empUser.last_name || ''}`
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      (empUser.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (emp.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (emp.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (emp.employee_id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (e.course_details?.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (e.program_details?.title || '').toLowerCase().includes(searchTerm.toLowerCase())
+      (e.training_program_details?.title || '').toLowerCase().includes(searchTerm.toLowerCase())
 
     const statusMatch = statusFilter === 'ALL' || e.status === statusFilter
     const typeMatch = typeFilter === 'ALL' || e.enrollment_type === typeFilter
@@ -314,11 +311,10 @@ export function EnrollmentManagement() {
               <tbody className="divide-y divide-slate-100">
                 {filteredEnrollments.map((enr) => {
                   const emp = enr.employee_details || {}
-                  const empUser = emp.user_details || {}
                   const targetTitle = enr.course_details
                     ? `${enr.course_details.code} - ${enr.course_details.title}`
-                    : enr.program_details
-                    ? `${enr.program_details.code} - ${enr.program_details.title}`
+                    : enr.training_program_details
+                    ? `${enr.training_program_details.code} - ${enr.training_program_details.title}`
                     : 'Curriculum'
                   const pct = enr.progress_percentage || 0
                   const isCompleted = enr.status === 'COMPLETED'
@@ -327,10 +323,10 @@ export function EnrollmentManagement() {
                     <tr key={enr.id} className="hover:bg-slate-50/60 transition">
                       <td className="py-3 px-4">
                         <div className="font-semibold text-slate-900">
-                          {empUser.first_name} {empUser.last_name}
+                          {emp.name || emp.email || 'Employee'}
                         </div>
                         <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                          {emp.employee_id} &bull; {emp.department_details?.name || 'Dept'}
+                          {emp.employee_id} &bull; {emp.department_name || 'Unassigned'}
                         </div>
                       </td>
 
@@ -447,7 +443,7 @@ export function EnrollmentManagement() {
                   <option value="">-- Choose an employee --</option>
                   {employees.map((emp) => (
                     <option key={emp.id} value={emp.id}>
-                      {emp.user_details?.first_name} {emp.user_details?.last_name} ({emp.employee_id}) &mdash; {emp.department_details?.name || 'No Dept'}
+                      {`${emp.first_name || ''} ${emp.last_name || ''}`.trim() || emp.email} ({emp.employee_id}) &mdash; {emp.department_name || 'No Dept'}
                     </option>
                   ))}
                 </select>

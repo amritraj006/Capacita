@@ -77,12 +77,14 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
         modules_data = []
         for m in modules:
             mp = progress_map.get(m.id)
+            file_url = request.build_absolute_uri(m.file.url) if getattr(m, 'file', None) else None
             modules_data.append({
                 'id': m.id,
                 'title': m.title,
                 'order': m.order,
                 'content_type': m.content_type,
                 'content_data': m.content_data,
+                'file_url': file_url,
                 'is_completed': mp.is_completed if mp else False,
                 'completed_at': mp.completed_at if mp else None,
             })
@@ -137,6 +139,11 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
             enrollment.completed_at = None
         enrollment.save()
 
+        # Auto-issue certificate & check parent training program completion
+        if enrollment.status == Enrollment.Status.COMPLETED:
+            self._auto_issue_certificate_if_eligible(enrollment, request.user)
+            self._sync_program_completions(enrollment.employee, request.user)
+
         return Response({
             'module_id': module.id,
             'is_completed': progress.is_completed,
@@ -145,6 +152,84 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
             'completed_modules': completed_modules,
             'total_modules': total_modules,
         })
+
+    def _auto_issue_certificate_if_eligible(self, enrollment, actor):
+        try:
+            from certificates.models import Certificate
+            from certificates.views import _build_certificate_number
+            emp = enrollment.employee
+            if enrollment.course:
+                if Certificate.objects.filter(employee=emp, course=enrollment.course, status=Certificate.Status.ACTIVE).exists():
+                    return
+                title = f"Certificate of Completion — {enrollment.course.title}"
+            elif enrollment.training_program:
+                if Certificate.objects.filter(employee=emp, training_program=enrollment.training_program, status=Certificate.Status.ACTIVE).exists():
+                    return
+                title = f"Certificate of Completion — {enrollment.training_program.title}"
+            else:
+                return
+            Certificate.objects.create(
+                certificate_number=_build_certificate_number(course=enrollment.course, training_program=enrollment.training_program),
+                title=title,
+                employee=emp,
+                course=enrollment.course,
+                training_program=enrollment.training_program,
+                enrollment=enrollment,
+                issued_by=actor,
+                metadata={'auto_issued': True}
+            )
+        except Exception:
+            pass
+
+    def _sync_program_completions(self, employee, actor):
+        prog_enrs = Enrollment.objects.filter(
+            employee=employee,
+            training_program__isnull=False
+        ).exclude(status__in=[Enrollment.Status.COMPLETED, Enrollment.Status.DROPPED]).select_related('training_program')
+        for pe in prog_enrs:
+            prog_courses = list(pe.training_program.courses.values_list('id', flat=True))
+            if not prog_courses:
+                continue
+            completed_course_ids = set(
+                Enrollment.objects.filter(
+                    employee=employee,
+                    course_id__in=prog_courses,
+                    status=Enrollment.Status.COMPLETED
+                ).values_list('course_id', flat=True)
+            )
+            if set(prog_courses).issubset(completed_course_ids):
+                pe.status = Enrollment.Status.COMPLETED
+                pe.completed_at = timezone.now()
+                pe.save(update_fields=['status', 'completed_at'])
+                self._auto_issue_certificate_if_eligible(pe, actor)
+
+    @action(detail=False, methods=['post'])
+    def open_program_course(self, request):
+        """Allows an employee enrolled in a training program to open and track a course inside it."""
+        user = request.user
+        if not hasattr(user, 'employee_profile'):
+            return Response({"detail": "Employee profile not found."}, status=status.HTTP_404_NOT_FOUND)
+        training_program_id = request.data.get('training_program_id')
+        course_id = request.data.get('course_id')
+        if not training_program_id or not course_id:
+            return Response({"detail": "training_program_id and course_id are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        employee = user.employee_profile
+        prog_enr = Enrollment.objects.filter(
+            employee=employee, training_program_id=training_program_id
+        ).exclude(status=Enrollment.Status.DROPPED).first()
+        if not prog_enr:
+            return Response({"detail": "You are not enrolled in this training program."}, status=status.HTTP_403_FORBIDDEN)
+
+        if not prog_enr.training_program.courses.filter(id=course_id).exists():
+            return Response({"detail": "Course is not part of this training program."}, status=status.HTTP_400_BAD_REQUEST)
+
+        course_enr, _ = Enrollment.objects.get_or_create(
+            employee=employee,
+            course_id=course_id,
+            defaults={'enrolled_by': user, 'enrollment_type': prog_enr.enrollment_type}
+        )
+        return Response(EnrollmentSerializer(course_enr).data)
 
     @action(detail=False, methods=['get'])
     def my_learning(self, request):
@@ -193,9 +278,9 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
             'training_program__lead_trainer'
         ).prefetch_related('module_progress', 'course__modules').all()
 
-        # If trainer, prioritize or filter to assigned programs
+        # If trainer, strictly scope to their assigned training programs
         if request.user.role == 'TRAINER':
-            queryset = queryset.filter(training_program__lead_trainer=request.user) | queryset.filter(course__isnull=False)
+            queryset = queryset.filter(training_program__lead_trainer=request.user)
 
         serializer = EnrollmentSerializer(queryset, many=True)
         return Response(serializer.data)

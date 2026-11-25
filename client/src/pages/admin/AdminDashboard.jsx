@@ -4,14 +4,12 @@ import {
   Building2,
   BookOpen,
   GraduationCap,
-  TrendingUp,
-  Award,
+  UserCheck,
   CheckCircle,
-  Clock,
+  Award,
   Activity,
   AlertCircle,
   Loader2,
-  ArrowUpRight
 } from 'lucide-react'
 import { dashboardApi } from '../../api/dashboard'
 
@@ -22,6 +20,7 @@ function MetricCard({ title, value, subtext, icon: Icon, color = 'slate' }) {
     emerald: 'bg-emerald-50 text-emerald-700',
     amber: 'bg-amber-50 text-amber-700',
     purple: 'bg-purple-50 text-purple-700',
+    indigo: 'bg-indigo-50 text-indigo-700',
   }
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
@@ -39,7 +38,7 @@ function MetricCard({ title, value, subtext, icon: Icon, color = 'slate' }) {
   )
 }
 
-export function AdminDashboard({ onNavigate }) {
+export function AdminDashboard() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -73,148 +72,76 @@ export function AdminDashboard({ onNavigate }) {
   }
 
   const {
-    total_employees,
-    total_departments,
-    total_courses,
-    total_training_programs,
-    training_participation,
-    course_completion,
-    employee_learning_overview,
-    recent_activities
+    total_employees = 0,
+    total_departments = 0,
+    total_courses = 0,
+    total_training_programs = 0,
+    total_active_enrollments = 0,
+    completed_training_programs = 0,
+    recent_activities = [],
   } = data
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <div>
-          <h1 className="text-lg font-semibold text-slate-900">Administrator Overview</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Real-time telemetry and capacity building analytics</p>
-        </div>
+      <div>
+        <h1 className="text-lg font-semibold text-slate-900">Admin Dashboard</h1>
+        <p className="text-sm text-slate-500 mt-0.5">Organization-wide training, enrollment, and completion overview</p>
       </div>
 
-      {/* Top Level Institutional Metrics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Core Metrics */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <MetricCard
           title="Total Employees"
           value={total_employees}
-          subtext="Active workforce accounts"
+          subtext="Registered employee accounts"
           icon={Users}
           color="blue"
         />
         <MetricCard
-          title="Departments"
+          title="Total Departments"
           value={total_departments}
-          subtext="Functional organizational units"
+          subtext="Organizational units"
           icon={Building2}
           color="slate"
         />
         <MetricCard
-          title="Courses"
+          title="Total Courses"
           value={total_courses}
-          subtext="Published learning paths"
+          subtext="Available learning resources"
           icon={BookOpen}
           color="emerald"
         />
         <MetricCard
-          title="Training Programs"
+          title="Total Training Programs"
           value={total_training_programs}
-          subtext="Structured cohort programs"
+          subtext="Structured training cohorts"
           icon={GraduationCap}
           color="purple"
         />
+        <MetricCard
+          title="Active Enrollments"
+          value={total_active_enrollments}
+          subtext="Enrolled & in-progress learners"
+          icon={UserCheck}
+          color="amber"
+        />
+        <MetricCard
+          title="Completed Training Programs"
+          value={completed_training_programs}
+          subtext="Programs marked completed"
+          icon={CheckCircle}
+          color="indigo"
+        />
       </div>
 
-      {/* Secondary Metrics: Participation & Completion */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Training Participation */}
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-slate-900">Training Participation</h2>
-              <GraduationCap size={16} className="text-purple-600" />
-            </div>
-            <p className="text-3xl font-bold text-slate-900">{training_participation.total_enrollments}</p>
-            <p className="text-xs text-slate-500 mt-1">Total cohort enrollments</p>
-
-            <div className="mt-4 space-y-2 pt-3 border-t border-slate-100 text-xs">
-              <div className="flex justify-between text-slate-600">
-                <span>Active Trainees (Distinct):</span>
-                <span className="font-semibold text-slate-900">{training_participation.active_trainees}</span>
-              </div>
-              <div className="flex justify-between text-slate-600">
-                <span>Completed Cohorts:</span>
-                <span className="font-semibold text-emerald-600">{training_participation.completed_trainings}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Course Completion Information */}
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-slate-900">Course Completion</h2>
-              <Award size={16} className="text-emerald-600" />
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-slate-900">{course_completion.completion_rate}%</span>
-              <span className="text-xs text-slate-400">completion rate</span>
-            </div>
-            <div className="w-full bg-slate-100 rounded-full h-2 mt-3">
-              <div
-                className="bg-emerald-500 h-2 rounded-full transition-all"
-                style={{ width: `${course_completion.completion_rate}%` }}
-              />
-            </div>
-
-            <div className="mt-4 space-y-2 pt-3 border-t border-slate-100 text-xs">
-              <div className="flex justify-between text-slate-600">
-                <span>Completed Courses:</span>
-                <span className="font-semibold text-emerald-600">{course_completion.completed}</span>
-              </div>
-              <div className="flex justify-between text-slate-600">
-                <span>In-Progress:</span>
-                <span className="font-semibold text-amber-600">{course_completion.in_progress}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Employee Learning Overview */}
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-slate-900">Learning Overview</h2>
-              <TrendingUp size={16} className="text-blue-600" />
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-slate-900">{employee_learning_overview.active_learners}</span>
-              <span className="text-xs text-slate-400">active learners</span>
-            </div>
-
-            <div className="mt-4 space-y-2 pt-3 border-t border-slate-100 text-xs">
-              <div className="flex justify-between text-slate-600">
-                <span>Modules Finished:</span>
-                <span className="font-semibold text-slate-900">{employee_learning_overview.total_modules_completed}</span>
-              </div>
-              <div className="flex justify-between text-slate-600">
-                <span>Pending Starts:</span>
-                <span className="font-semibold text-slate-700">{employee_learning_overview.enrolled}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Platform Activities */}
+      {/* Recent Training Activities */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Activity size={16} className="text-slate-500" />
-            <h2 className="text-sm font-semibold text-slate-800">Recent Platform Activities</h2>
+            <h2 className="text-sm font-semibold text-slate-800">Recent Training Activities</h2>
           </div>
-          <span className="text-xs text-slate-400">Live operational feed</span>
+          <span className="text-xs text-slate-400">Latest records</span>
         </div>
 
         {recent_activities && recent_activities.length > 0 ? (
@@ -245,7 +172,7 @@ export function AdminDashboard({ onNavigate }) {
             ))}
           </div>
         ) : (
-          <div className="p-8 text-center text-sm text-slate-400">No platform activity recorded yet.</div>
+          <div className="p-8 text-center text-sm text-slate-400">No training activity recorded yet.</div>
         )}
       </div>
     </div>

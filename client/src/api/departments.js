@@ -42,7 +42,16 @@ export const departmentsApi = {
     const res = await apiClient(`/departments/${id}/`, {
       method: 'DELETE',
     })
-    if (!res.ok) throw new Error('Failed to delete department')
+    if (!res.ok) {
+      const result = await res.json().catch(() => ({}))
+      throw new Error(result.detail || 'Failed to delete department')
+    }
     return true
+  },
+
+  async getDepartmentEmployees(id) {
+    const res = await apiClient(`/departments/${id}/employees/`)
+    if (!res.ok) throw new Error('Failed to fetch department employees')
+    return res.json()
   },
 }

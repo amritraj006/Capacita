@@ -22,11 +22,12 @@ class CourseMinimalSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Course
-        fields = ['id', 'title', 'code', 'category', 'level', 'instructor', 'modules_count']
+        fields = ['id', 'title', 'code', 'category', 'level', 'instructor', 'duration_hours', 'modules_count']
 
 class TrainingProgramMinimalSerializer(serializers.ModelSerializer):
     lead_trainer_name = serializers.SerializerMethodField()
     courses_count = serializers.IntegerField(source='courses.count', read_only=True)
+    courses = CourseMinimalSerializer(many=True, read_only=True)
 
     class Meta:
         model = TrainingProgram
@@ -34,11 +35,13 @@ class TrainingProgramMinimalSerializer(serializers.ModelSerializer):
             'id',
             'title',
             'code',
+            'description',
             'status',
             'start_date',
             'end_date',
             'lead_trainer_name',
             'courses_count',
+            'courses',
             'location_or_link',
         ]
 
@@ -138,11 +141,15 @@ class EnrollmentSerializer(serializers.ModelSerializer):
         if course and training_program:
             raise serializers.ValidationError("Cannot enroll in both a course and a training program simultaneously.")
 
-        # Check existing active enrollment
+        # Check existing active enrollment & capacity
         if self.instance is None:  # on create
             if course and Enrollment.objects.filter(employee=employee, course=course).exclude(status=Enrollment.Status.DROPPED).exists():
                 raise serializers.ValidationError({"course": "Employee is already enrolled in this course."})
-            if training_program and Enrollment.objects.filter(employee=employee, training_program=training_program).exclude(status=Enrollment.Status.DROPPED).exists():
-                raise serializers.ValidationError({"training_program": "Employee is already enrolled in this training program."})
+            if training_program:
+                if Enrollment.objects.filter(employee=employee, training_program=training_program).exclude(status=Enrollment.Status.DROPPED).exists():
+                    raise serializers.ValidationError({"training_program": "Employee is already enrolled in this training program."})
+                active_count = training_program.enrollments.exclude(status=Enrollment.Status.DROPPED).count()
+                if active_count >= training_program.max_participants:
+                    raise serializers.ValidationError({"training_program": f"Training program capacity ({training_program.max_participants}) has been reached."})
 
         return attrs

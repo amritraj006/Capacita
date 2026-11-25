@@ -42,12 +42,9 @@ export function TrainerMonitoringPage() {
 
   const filteredEnrollments = enrollments.filter((e) => {
     const emp = e.employee_details || {}
-    const empUser = emp.user_details || {}
     const nameMatch =
-      `${empUser.first_name || ''} ${empUser.last_name || ''}`
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      (empUser.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (emp.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (emp.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (emp.employee_id || '').toLowerCase().includes(searchTerm.toLowerCase())
 
     const statusMatch = statusFilter === 'ALL' || e.status === statusFilter
@@ -188,11 +185,10 @@ export function TrainerMonitoringPage() {
               <tbody className="divide-y divide-slate-100">
                 {filteredEnrollments.map((enr) => {
                   const emp = enr.employee_details || {}
-                  const empUser = emp.user_details || {}
                   const targetTitle = enr.course_details
                     ? `Course: ${enr.course_details.code} - ${enr.course_details.title}`
-                    : enr.program_details
-                    ? `Program: ${enr.program_details.code} - ${enr.program_details.title}`
+                    : enr.training_program_details
+                    ? `Program: ${enr.training_program_details.code} - ${enr.training_program_details.title}`
                     : 'Training Track'
                   const pct = enr.progress_percentage || 0
                   const isCompleted = enr.status === 'COMPLETED'
@@ -201,17 +197,17 @@ export function TrainerMonitoringPage() {
                     <tr key={enr.id} className="hover:bg-slate-50/60 transition">
                       <td className="py-3 px-4">
                         <div className="font-semibold text-slate-900">
-                          {empUser.first_name} {empUser.last_name}
+                          {emp.name || emp.email || 'Employee'}
                         </div>
                         <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                          {emp.employee_id} &bull; {empUser.email}
+                          {emp.employee_id} &bull; {emp.email}
                         </div>
                       </td>
 
                       <td className="py-3 px-4 text-slate-600">
-                        <div className="font-medium text-slate-800">{emp.job_title || 'Employee'}</div>
+                        <div className="font-medium text-slate-800">{emp.designation || 'Employee'}</div>
                         <div className="text-[11px] text-slate-400">
-                          {emp.department_details?.name || 'Department'}
+                          {emp.department_name || 'Unassigned'}
                         </div>
                       </td>
 

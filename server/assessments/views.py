@@ -25,6 +25,15 @@ class AssessmentViewSet(viewsets.ModelViewSet):
     ordering_fields = ['code', 'created_at', 'passing_percentage']
     ordering = ['code']
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+        if user.is_authenticated and user.role == 'TRAINER':
+            queryset = queryset.filter(
+                Q(training_program__lead_trainer=user) | Q(created_by=user)
+            ).distinct()
+        return queryset
+
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
 
@@ -69,15 +78,22 @@ class AssessmentViewSet(viewsets.ModelViewSet):
             employee=employee, course__isnull=False
         ).values_list('course_id', flat=True)
 
-        enrolled_program_ids = Enrollment.objects.filter(
+        enrolled_program_ids = list(Enrollment.objects.filter(
             employee=employee, training_program__isnull=False
-        ).values_list('training_program_id', flat=True)
+        ).exclude(status=Enrollment.Status.DROPPED).values_list('training_program_id', flat=True))
+
+        # Also include courses belonging to enrolled training programs
+        from training.models import TrainingProgram
+        program_course_ids = list(TrainingProgram.objects.filter(
+            id__in=enrolled_program_ids
+        ).values_list('courses__id', flat=True))
+        all_course_ids = set(list(enrolled_course_ids) + [cid for cid in program_course_ids if cid])
 
         # Active assessments matching enrollment or generally active
         assessments = Assessment.objects.filter(
             is_active=True
         ).filter(
-            Q(course_id__in=enrolled_course_ids) |
+            Q(course_id__in=all_course_ids) |
             Q(training_program_id__in=enrolled_program_ids) |
             (Q(course__isnull=True) & Q(training_program__isnull=True))
         ).distinct()
@@ -148,7 +164,7 @@ class AssessmentViewSet(viewsets.ModelViewSet):
             points_awarded = Decimal('0')
 
             if q.question_type in [Question.QuestionType.SINGLE_CHOICE, Question.QuestionType.TRUE_FALSE]:
-                if str(given_ans).strip().lower() == str(q.correct_answer).strip().lower():
+                if given_ans is not None and str(given_ans).strip().lower() == str(q.correct_answer).strip().lower():
                     is_correct = True
                     points_awarded = Decimal(str(q.points))
             elif q.question_type == Question.QuestionType.MULTIPLE_CHOICE:
@@ -217,6 +233,11 @@ class AssessmentSubmissionViewSet(viewsets.ModelViewSet):
 
         if user.is_authenticated and user.role == 'EMPLOYEE':
             return queryset.filter(employee__user=user)
+
+        if user.is_authenticated and user.role == 'TRAINER':
+            queryset = queryset.filter(
+                Q(assessment__training_program__lead_trainer=user) | Q(assessment__created_by=user)
+            ).distinct()
 
         assessment_id = self.request.query_params.get('assessment')
         if assessment_id:

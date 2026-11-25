@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 
 class TrainingProgram(models.Model):
     class Status(models.TextChoices):
@@ -31,6 +32,27 @@ class TrainingProgram(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+
+    def sync_status_from_dates(self):
+        """Automatically determine Upcoming/Ongoing/Completed from dates unless Draft or Cancelled."""
+        if self.status in [self.Status.DRAFT, self.Status.CANCELLED]:
+            return
+        today = timezone.now().date()
+        if self.start_date and self.end_date:
+            if today < self.start_date:
+                self.status = self.Status.SCHEDULED
+            elif self.start_date <= today <= self.end_date:
+                self.status = self.Status.IN_PROGRESS
+            else:
+                self.status = self.Status.COMPLETED
+        elif self.start_date:
+            self.status = self.Status.IN_PROGRESS if today >= self.start_date else self.Status.SCHEDULED
+        elif self.end_date and today > self.end_date:
+            self.status = self.Status.COMPLETED
+
+    def save(self, *args, **kwargs):
+        self.sync_status_from_dates()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.code} - {self.title} ({self.status})"

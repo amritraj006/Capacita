@@ -4,9 +4,8 @@ import {
   Plus,
   Search,
   Edit2,
-  CheckCircle2,
+  Trash2,
   Users,
-  Calendar,
   AlertCircle,
 } from 'lucide-react'
 import { departmentsApi } from '../../api/departments'
@@ -32,6 +31,11 @@ export function DepartmentManagement() {
   const [formData, setFormData] = useState({ name: '', code: '', description: '' })
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState(null)
+
+  // View Employees Modal
+  const [membersDept, setMembersDept] = useState(null)
+  const [membersList, setMembersList] = useState([])
+  const [loadingMembers, setLoadingMembers] = useState(false)
 
   const showToast = (type, title, message) => {
     setToast({ type, title, message })
@@ -96,6 +100,31 @@ export function DepartmentManagement() {
       setFormError(err.message)
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleViewMembers = async (dept) => {
+    setMembersDept(dept)
+    setLoadingMembers(true)
+    try {
+      const emps = await departmentsApi.getDepartmentEmployees(dept.id)
+      setMembersList(Array.isArray(emps) ? emps : emps.results || [])
+    } catch (err) {
+      showToast('error', 'Error', err.message)
+      setMembersList([])
+    } finally {
+      setLoadingMembers(false)
+    }
+  }
+
+  const handleDeleteDept = async (dept) => {
+    if (!window.confirm(`Delete department "${dept.name}"?`)) return
+    try {
+      await departmentsApi.deleteDepartment(dept.id)
+      showToast('success', 'Deleted', `Department ${dept.name} deleted.`)
+      fetchDepartments()
+    } catch (err) {
+      showToast('error', 'Cannot Delete', err.message)
     }
   }
 
@@ -193,10 +222,14 @@ export function DepartmentManagement() {
                     {dept.description || 'No description provided.'}
                   </TableCell>
                   <TableCell>
-                    <span className="inline-flex items-center gap-1.5 text-xs text-slate-700 font-medium">
-                      <Users className="h-3.5 w-3.5 text-slate-400" />
+                    <button
+                      type="button"
+                      onClick={() => handleViewMembers(dept)}
+                      className="inline-flex items-center gap-1.5 text-xs text-indigo-700 hover:underline font-medium"
+                    >
+                      <Users className="h-3.5 w-3.5 text-indigo-500" />
                       {dept.employees_count} employees
-                    </span>
+                    </button>
                   </TableCell>
                   <TableCell>
                     <Badge variant={dept.is_active ? 'success' : 'neutral'} dot>
@@ -204,14 +237,23 @@ export function DepartmentManagement() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      leftIcon={Edit2}
-                      onClick={() => handleOpenEdit(dept)}
-                    >
-                      Edit
-                    </Button>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        leftIcon={Edit2}
+                        onClick={() => handleOpenEdit(dept)}
+                      >
+                        Edit
+                      </Button>
+                      <button
+                        title="Delete Department"
+                        onClick={() => handleDeleteDept(dept)}
+                        className="p-1.5 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -288,6 +330,41 @@ export function DepartmentManagement() {
             />
           </div>
         </form>
+      </Modal>
+
+      {/* Department Employees Modal */}
+      <Modal
+        isOpen={!!membersDept}
+        onClose={() => setMembersDept(null)}
+        title={`Employees in ${membersDept?.name || ''}`}
+        description="List of employees currently assigned to this department."
+        footer={
+          <Button variant="secondary" onClick={() => setMembersDept(null)}>
+            Close
+          </Button>
+        }
+      >
+        {loadingMembers ? (
+          <p className="text-xs text-slate-400 py-4 text-center">Loading employees...</p>
+        ) : membersList.length === 0 ? (
+          <p className="text-xs text-slate-500 py-4 text-center">No employees assigned to this department.</p>
+        ) : (
+          <div className="divide-y divide-slate-100 max-h-72 overflow-y-auto">
+            {membersList.map((emp) => (
+              <div key={emp.id} className="py-2.5 flex items-center justify-between text-xs">
+                <div>
+                  <p className="font-semibold text-slate-900">
+                    {emp.first_name} {emp.last_name} <span className="font-mono text-slate-400">({emp.employee_id})</span>
+                  </p>
+                  <p className="text-slate-500">{emp.email} &bull; {emp.designation}</p>
+                </div>
+                <Badge variant={emp.is_active ? 'success' : 'danger'} size="sm">
+                  {emp.is_active ? 'Active' : 'Inactive'}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        )}
       </Modal>
     </div>
   )

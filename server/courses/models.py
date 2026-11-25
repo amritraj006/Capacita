@@ -12,6 +12,7 @@ class Course(models.Model):
     category = models.CharField(max_length=100, default='General')
     level = models.CharField(max_length=20, choices=Level.choices, default=Level.BEGINNER)
     instructor = models.CharField(max_length=100, default="Capacita Faculty")
+    duration_hours = models.DecimalField(max_digits=5, decimal_places=1, default=1.0)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -34,6 +35,7 @@ class CourseModule(models.Model):
     title = models.CharField(max_length=200)
     content_type = models.CharField(max_length=20, choices=ContentType.choices, default=ContentType.TEXT)
     content_data = models.TextField(blank=True)
+    file = models.FileField(upload_to='course_materials/', null=True, blank=True)
     order = models.PositiveIntegerField(default=1)
     created_at = models.DateTimeField(auto_now_add=True)
 

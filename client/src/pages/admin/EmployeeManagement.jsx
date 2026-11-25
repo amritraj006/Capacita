@@ -3,17 +3,15 @@ import {
   Users,
   Plus,
   Search,
-  Filter,
   Edit2,
   Power,
-  Mail,
   Building2,
-  Calendar,
   AlertCircle,
-  CheckCircle2,
+  BookOpen,
 } from 'lucide-react'
 import { employeesApi } from '../../api/employees'
 import { departmentsApi } from '../../api/departments'
+import { apiClient } from '../../api/client'
 import { Button } from '../../design-system/Button'
 import { Input } from '../../design-system/Input'
 import { Badge } from '../../design-system/Badge'
@@ -39,6 +37,11 @@ export function EmployeeManagement() {
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [confirmToggleOpen, setConfirmToggleOpen] = useState(false)
   const [targetEmployee, setTargetEmployee] = useState(null)
+
+  // Learning History Modal
+  const [historyEmp, setHistoryEmp] = useState(null)
+  const [historyData, setHistoryData] = useState({ enrollments: [], certificates: [] })
+  const [loadingHistory, setLoadingHistory] = useState(false)
 
   // Form states
   const [formData, setFormData] = useState({
@@ -182,6 +185,25 @@ export function EmployeeManagement() {
       fetchEmployees()
     } catch (err) {
       showToast('error', 'Error', err.message)
+    }
+  }
+
+  const handleViewHistory = async (emp) => {
+    setHistoryEmp(emp)
+    setLoadingHistory(true)
+    try {
+      const [enrRes, certRes] = await Promise.all([
+        apiClient(`/enrollments/?employee=${emp.id}`).then((r) => (r.ok ? r.json() : [])),
+        apiClient(`/certificates/?employee=${emp.id}`).then((r) => (r.ok ? r.json() : [])),
+      ])
+      setHistoryData({
+        enrollments: Array.isArray(enrRes) ? enrRes : enrRes.results || [],
+        certificates: Array.isArray(certRes) ? certRes : certRes.results || [],
+      })
+    } catch {
+      setHistoryData({ enrollments: [], certificates: [] })
+    } finally {
+      setLoadingHistory(false)
     }
   }
 
@@ -353,6 +375,14 @@ export function EmployeeManagement() {
 
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          leftIcon={BookOpen}
+                          onClick={() => handleViewHistory(emp)}
+                        >
+                          History
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -617,6 +647,69 @@ export function EmployeeManagement() {
         }
         confirmText={targetEmployee?.is_active ? 'Yes, Deactivate' : 'Yes, Reactivate'}
       />
+
+      {/* LEARNING HISTORY MODAL */}
+      <Modal
+        isOpen={!!historyEmp}
+        onClose={() => setHistoryEmp(null)}
+        title={`Learning History: ${historyEmp?.first_name || ''} ${historyEmp?.last_name || ''} (${historyEmp?.employee_id || ''})`}
+        description="Enrolled courses, training programs, and earned certificates."
+        footer={
+          <Button variant="secondary" onClick={() => setHistoryEmp(null)}>
+            Close
+          </Button>
+        }
+      >
+        {loadingHistory ? (
+          <p className="text-xs text-slate-400 py-4 text-center">Loading learning history...</p>
+        ) : (
+          <div className="space-y-4 max-h-96 overflow-y-auto text-xs">
+            <div>
+              <h4 className="font-semibold text-slate-800 mb-2">Enrollments ({historyData.enrollments.length})</h4>
+              {historyData.enrollments.length === 0 ? (
+                <p className="text-slate-400">No enrollments recorded.</p>
+              ) : (
+                <div className="space-y-2">
+                  {historyData.enrollments.map((enr) => (
+                    <div key={enr.id} className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between">
+                      <div>
+                        <p className="font-semibold text-slate-800">
+                          {enr.course_details?.title || enr.training_program_details?.title || 'Program'}
+                        </p>
+                        <p className="text-[11px] text-slate-500">
+                          Progress: {enr.progress_percentage || 0}% &bull; Enrolled {new Date(enr.enrolled_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Badge variant={enr.status === 'COMPLETED' ? 'success' : 'primary'} size="sm">
+                        {enr.status}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-slate-800 mb-2">Certificates ({historyData.certificates.length})</h4>
+              {historyData.certificates.length === 0 ? (
+                <p className="text-slate-400">No certificates issued yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {historyData.certificates.map((c) => (
+                    <div key={c.id} className="p-2.5 rounded-lg bg-emerald-50/50 border border-emerald-200 flex items-center justify-between">
+                      <div>
+                        <p className="font-semibold text-slate-800">{c.title}</p>
+                        <p className="text-[11px] text-slate-500 font-mono">{c.certificate_number}</p>
+                      </div>
+                      <Badge variant="success" size="sm">{c.status}</Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

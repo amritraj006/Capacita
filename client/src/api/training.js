@@ -52,4 +52,20 @@ export const trainingApi = {
     if (!res.ok) throw new Error('Failed to delete training program')
     return true
   },
+
+  async getProgramEnrollments(id) {
+    const res = await apiClient(`/training/${id}/enrollments/`)
+    if (!res.ok) throw new Error('Failed to fetch program enrollments')
+    return res.json()
+  },
+
+  async bulkEnroll(id, data) {
+    const res = await apiClient(`/training/${id}/bulk_enroll/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+    const result = await res.json()
+    if (!res.ok) throw new Error(result.detail || 'Failed to enroll participants')
+    return result
+  },
 }

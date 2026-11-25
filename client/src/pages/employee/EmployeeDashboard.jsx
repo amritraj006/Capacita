@@ -9,7 +9,8 @@ import {
   AlertCircle,
   Loader2,
   Calendar,
-  CheckSquare
+  CheckSquare,
+  ChevronRight
 } from 'lucide-react'
 import { dashboardApi } from '../../api/dashboard'
 
@@ -47,13 +48,13 @@ export function EmployeeDashboard({ onNavigate }) {
   }
 
   const {
-    assigned_courses,
-    active_training_programs,
-    learning_progress,
-    pending_assessments,
-    completed_courses,
-    earned_certificates
-  } = data
+    assigned_courses = [],
+    active_training_programs = [],
+    learning_progress = { total_courses: 0, completed_courses: 0, total_modules: 0, completed_modules: 0, overall_progress: 0 },
+    pending_assessments = [],
+    completed_courses = [],
+    earned_certificates = []
+  } = data || {}
 
   return (
     <div className="space-y-6">
@@ -65,12 +66,15 @@ export function EmployeeDashboard({ onNavigate }) {
 
       {/* Quick Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
+        <div
+          onClick={() => onNavigate && onNavigate('my-learning', 'My Learning')}
+          className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs cursor-pointer hover:border-slate-300 transition"
+        >
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Enrolled Courses</p>
-              <p className="text-2xl font-bold text-slate-900">{learning_progress.total_courses}</p>
-              <p className="text-xs text-slate-400 mt-1">{learning_progress.completed_courses} completed</p>
+              <p className="text-2xl font-bold text-slate-900">{learning_progress.total_courses || 0}</p>
+              <p className="text-xs text-slate-400 mt-1">{learning_progress.completed_courses || 0} completed</p>
             </div>
             <span className="w-9 h-9 rounded-lg flex items-center justify-center bg-blue-50 text-blue-700">
               <BookOpen size={18} />
@@ -78,7 +82,10 @@ export function EmployeeDashboard({ onNavigate }) {
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
+        <div
+          onClick={() => onNavigate && onNavigate('my-learning', 'My Learning')}
+          className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs cursor-pointer hover:border-slate-300 transition"
+        >
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Training Cohorts</p>
@@ -95,8 +102,10 @@ export function EmployeeDashboard({ onNavigate }) {
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Overall Progress</p>
-              <p className="text-2xl font-bold text-slate-900">{learning_progress.overall_progress}%</p>
-              <p className="text-xs text-slate-400 mt-1">{learning_progress.completed_modules} of {learning_progress.total_modules} modules</p>
+              <p className="text-2xl font-bold text-slate-900">{learning_progress.overall_progress || 0}%</p>
+              <p className="text-xs text-slate-400 mt-1">
+                {learning_progress.completed_modules || 0} of {learning_progress.total_modules || 0} modules
+              </p>
             </div>
             <span className="w-9 h-9 rounded-lg flex items-center justify-center bg-emerald-50 text-emerald-700">
               <TrendingUp size={18} />
@@ -104,7 +113,10 @@ export function EmployeeDashboard({ onNavigate }) {
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
+        <div
+          onClick={() => onNavigate && onNavigate('my-certificates', 'My Certificates')}
+          className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs cursor-pointer hover:border-slate-300 transition"
+        >
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Verified Certs</p>
@@ -121,17 +133,32 @@ export function EmployeeDashboard({ onNavigate }) {
       {/* Assigned Courses Section */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-800">Assigned Courses & Curriculum Progress</h2>
-          <span className="text-xs text-slate-400">{assigned_courses.length} Courses</span>
+          <div>
+            <h2 className="text-sm font-semibold text-slate-800">Assigned Courses & Curriculum Progress</h2>
+            <span className="text-xs text-slate-400">{assigned_courses.length} Courses</span>
+          </div>
+          {onNavigate && (
+            <button
+              onClick={() => onNavigate('my-learning', 'My Learning')}
+              className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-800 transition"
+            >
+              <span>Go to Learning Workspace</span>
+              <ChevronRight size={14} />
+            </button>
+          )}
         </div>
         {assigned_courses.length === 0 ? (
           <div className="p-8 text-center text-sm text-slate-400">
-            No courses currently assigned. Check back later or request enrollment.
+            No courses currently assigned. Check back later or request enrollment from your administrator.
           </div>
         ) : (
           <div className="divide-y divide-slate-100">
             {assigned_courses.map(course => (
-              <div key={course.enrollment_id} className="p-5 hover:bg-slate-50/50 transition-colors">
+              <div
+                key={course.enrollment_id}
+                onClick={() => onNavigate && onNavigate('my-learning', 'My Learning')}
+                className="p-5 hover:bg-slate-50/50 transition-colors cursor-pointer"
+              >
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-2">
@@ -182,7 +209,15 @@ export function EmployeeDashboard({ onNavigate }) {
               <CheckSquare size={16} className="text-purple-600" />
               <h2 className="text-sm font-semibold text-slate-800">Pending Assessments</h2>
             </div>
-            <span className="text-xs text-slate-400">{pending_assessments.length} Tests</span>
+            {onNavigate && (
+              <button
+                onClick={() => onNavigate('my-assessments', 'My Assessments')}
+                className="inline-flex items-center gap-1 text-xs font-medium text-purple-600 hover:text-purple-800 transition"
+              >
+                <span>View All</span>
+                <ChevronRight size={14} />
+              </button>
+            )}
           </div>
           {pending_assessments.length === 0 ? (
             <div className="p-8 text-center text-sm text-slate-400">
@@ -192,7 +227,11 @@ export function EmployeeDashboard({ onNavigate }) {
           ) : (
             <div className="divide-y divide-slate-100">
               {pending_assessments.map(asm => (
-                <div key={asm.id} className="p-4 hover:bg-slate-50/50 transition-colors">
+                <div
+                  key={asm.id}
+                  onClick={() => onNavigate && onNavigate('my-assessments', 'My Assessments')}
+                  className="p-4 hover:bg-slate-50/50 transition-colors cursor-pointer"
+                >
                   <div className="flex items-start justify-between">
                     <div>
                       <span className="text-xs font-mono font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">
@@ -221,7 +260,15 @@ export function EmployeeDashboard({ onNavigate }) {
               <Calendar size={16} className="text-blue-600" />
               <h2 className="text-sm font-semibold text-slate-800">Active Training Programs</h2>
             </div>
-            <span className="text-xs text-slate-400">{active_training_programs.length} Cohorts</span>
+            {onNavigate && (
+              <button
+                onClick={() => onNavigate('my-learning', 'My Learning')}
+                className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 transition"
+              >
+                <span>View All</span>
+                <ChevronRight size={14} />
+              </button>
+            )}
           </div>
           {active_training_programs.length === 0 ? (
             <div className="p-8 text-center text-sm text-slate-400">
@@ -230,7 +277,11 @@ export function EmployeeDashboard({ onNavigate }) {
           ) : (
             <div className="divide-y divide-slate-100">
               {active_training_programs.map(tp => (
-                <div key={tp.enrollment_id} className="p-4 hover:bg-slate-50/50 transition-colors">
+                <div
+                  key={tp.enrollment_id}
+                  onClick={() => onNavigate && onNavigate('my-learning', 'My Learning')}
+                  className="p-4 hover:bg-slate-50/50 transition-colors cursor-pointer"
+                >
                   <div className="flex items-start justify-between">
                     <div>
                       <span className="text-xs font-mono font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">
