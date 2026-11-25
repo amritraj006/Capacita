@@ -1,0 +1,35 @@
+
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 64 64"
+     width="64"
+     height="64">
+
+  <rect width="64" height="64" rx="14" fill="#172554"/>
+
+  <!-- Bold C -->
+  <path
+    d="M43 23
+       C39 17 33 14 26 16
+       C15 18 10 27 12 37
+       C14 48 25 53 35 48
+       C38 47 41 45 43 42"
+    fill="none"
+    stroke="#FFFFFF"
+    stroke-width="8"
+    stroke-linecap="round"
+  />
+
+  <!-- Graduation cap -->
+  <path
+    d="M17 14 L34 7 L51 14 L34 21 Z"
+    fill="#60A5FA"
+  />
+
+  <path
+    d="M46 16 V25"
+    stroke="#60A5FA"
+    stroke-width="3"
+    stroke-linecap="round"
+  />
+
+</svg>
